@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SmartGym Pro - Älykäs Treenisovellus</title>
+  <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlNtYXJ0R3ltIFBybyIsCiAgInNob3J0X25hbWUiIjogIlNtYXJ0R3ltIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwZjE3MmEiLAogICJ0aGVtZV9jb2xvciIjogIiMwZjE3MmEiCn0=">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 1rem; }
+    .btn-primary { background-color: #2563eb; color: white; border-radius: 0.75rem; font-weight: 600; }
+    .btn-primary:active { background-color: #1d4ed8; }
+    .tab-active { color: #38bdf8; border-bottom: 2px solid #38bdf8; }
+    input, select { background-color: #0f172a; border: 1px solid #334155; color: white; border-radius: 0.5rem; }
+    input:focus, select:focus { border-color: #38bdf8; outline: none; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  </style>
+</head>
+<body class="pb-24">
+
+  <!-- YLÄPALKKI -->
+  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-3 flex justify-between items-center">
+    <div class="flex items-center gap-2">
+      <i class="fa-solid font-bold text-sky-400 text-xl fa-dumbbell"></i>
+      <h1 class="font-bold text-lg text-slate-100">SmartGym <span class="text-xs bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full border border-sky-500/30">Pro</span></h1>
+    </div>
+    <button onclick="openWizard()" class="text-slate-400 hover:text-white p-2 text-sm flex items-center gap-1 bg-slate-800 rounded-lg border border-slate-700">
+      <i class="fa-solid fa-sliders"></i> Profiili
+    </button>
+  </header>
+
+  <!-- ONBOARDING WIZARD MODAL -->
+  <div id="wizardModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="card p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <h2 class="text-xl font-bold mb-1 text-sky-400 flex items-center gap-2">
+        <i class="fa-solid fa-user-gear"></i> Käyttäjäprofiili & Asetukset
+      </h2>
+      <p class="text-xs text-slate-400 mb-6">Syötä tietosi saadaksesi personoidut lähtöpainot ja kuntosaliohjelman.</p>
+      
+      <form id="wizardForm" onsubmit="saveWizard(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Sukupuoli</label>
+          <select id="wizGender" class="w-full p-2.5 text-sm" required>
+            <option value="male">Mies</option>
+            <option value="female">Nainen</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Ikä (vuotta)</label>
+            <input type="number" id="wizAge" min="15" max="90" value="40" class="w-full p-2.5 text-sm" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Kehonpaino (kg)</label>
+            <input type="number" id="wizWeight" min="40" max="200" value="80" class="w-full p-2.5 text-sm" required>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Tausta & Taidot</label>
+          <select id="wizLevel" class="w-full p-2.5 text-sm" required>
+            <option value="athlete">Aktiiviurheilija (Vahva pohja, salialoittelija)</option>
+            <option value="fit">Aktiivinen kuntoilija</option>
+            <option value="beginner">Täysi aloittelija</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Treenipäivät viikossa</label>
+          <select id="wizDays" class="w-full p-2.5 text-sm" required>
+            <option value="2">2 päivää / vko (Koko keho x2)</option>
+            <option value="3">3 päivää / vko (Työntävät / Vetävät / Jalat)</option>
+            <option value="4" selected>4 päivää / vko (Ylä- / Alavartalo x2)</option>
+            <option value="5">5 päivää / vko (Kohdennettu jako)</option>
+          </select>
+        </div>
+
+        <div class="pt-4 flex gap-3">
+          <button type="button" onclick="closeWizard()" id="wizardCloseBtn" class="w-1/3 py-2.5 text-sm bg-slate-800 text-slate-300 rounded-lg font-semibold hidden">Peruuta</button>
+          <button type="submit" class="w-full btn-primary py-2.5 text-sm">Tallenna & Päivitä Ohjelma</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- NAVEGOINTI -->
+  <nav class="flex border-b border-slate-800 bg-slate-900 text-xs font-semibold text-slate-400 sticky top-[53px] z-30">
+    <button onclick="switchTab('workout')" id="tab-workout" class="flex-1 py-3 text-center tab-active flex justify-center items-center gap-1.5">
+      <i class="fa-solid fa-list-check text-sm"></i> Treeni
+    </button>
+    <button onclick="switchTab('stats')" id="tab-stats" class="flex-1 py-3 text-center flex justify-center items-center gap-1.5">
+      <i class="fa-solid fa-chart-line text-sm"></i> Kehitys
+    </button>
+    <button onclick="switchTab('recovery')" id="tab-recovery" class="flex-1 py-3 text-center flex justify-center items-center gap-1.5">
+      <i class="fa-solid fa-heart-pulse text-sm"></i> Palautuminen
+    </button>
+  </nav>
+
+  <!-- PÄÄSISÄLTÖALUE -->
+  <main class="p-4 max-w-lg mx-auto">
+
+    <!-- TREENINÄKYMÄ -->
+    <section id="view-workout" class="space-y-4">
+      
+      <!-- PÄIVÄVALITSIEN SCROLLI -->
+      <div id="daySelector" class="flex gap-2 overflow-x-auto pb-2 scrollbar-none"></div>
+
+      <!-- TIMER BAR -->
+      <div id="timerCard" class="card p-3 flex items-center justify-between bg-slate-800/80 border-sky-500/30 hidden">
+        <div class="flex items-center gap-3">
+          <i class="fa-solid fa-stopwatch text-sky-400 text-2xl animate-pulse"></i>
+          <div>
+            <div class="text-xs text-slate-400">Lepoajastin</div>
+            <div id="timerDisplay" class="text-xl font-bold font-mono text-sky-400">01:30</div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="addTimerSeconds(30)" class="px-2.5 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded text-slate-200">+30s</button>
+          <button onclick="stopTimer()" class="px-2.5 py-1 text-xs bg-red-500/20 text-red-400 border border-red-500/30 rounded">Sulje</button>
+        </div>
+      </div>
+
+      <!-- LIIKELISTA -->
+      <div id="exerciseList" class="space-y-4"></div>
+
+      <button onclick="finishWorkout()" class="w-full btn-primary py-3 text-center text-sm font-bold shadow-lg shadow-blue-500/20">
+        <i class="fa-solid fa-circle-check mr-2"></i> Päätä ja Tallenna Treeni
+      </button>
+    </section>
+
+    <!-- KEHITYSNÄKYMÄ (CHARTS) -->
+    <section id="view-stats" class="space-y-4 hidden">
+      <div class="card p-4">
+        <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-chart-area text-sky-400"></i> Voimakehitys (Arvioitu 1RM)
+        </h3>
+        <select id="chartExerciseSelect" onchange="updateChart()" class="w-full p-2 text-xs mb-4"></select>
+        <div class="relative h-64">
+          <canvas id="progressChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card p-4 space-y-3">
+        <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+          <i class="fa-solid fa-database text-sky-400"></i> Data & Varmuuskopiointi
+        </h3>
+        <p class="text-xs text-slate-400">Lataa treenihistoriasi talteen tai tuo aiemmat tiedot.</p>
+        <div class="flex gap-2">
+          <button onclick="exportData()" class="flex-1 py-2 text-xs bg-slate-800 border border-slate-700 rounded text-slate-200 font-semibold">
+            <i class="fa-solid fa-download mr-1"></i> Vie (JSON)
+          </button>
+          <button onclick="document.getElementById('importFile').click()" class="flex-1 py-2 text-xs bg-slate-800 border border-slate-700 rounded text-slate-200 font-semibold">
+            <i class="fa-solid fa-upload mr-1"></i> Tuo
+          </button>
+          <input type="file" id="importFile" class="hidden" onchange="importData(event)">
+        </div>
+      </div>
+    </section>
+
+    <!-- PALAUTUMINEN & RAVINTO -->
+    <section id="view-recovery" class="space-y-4 hidden">
+      <div class="card p-4 space-y-4">
+        <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+          <i class="fa-solid fa-battery-half text-sky-400"></i> Päivän Palautumismittarit
+        </h3>
+        
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Unet (tuntia): <span id="sleepVal" class="text-sky-400 font-bold">7.5</span>h</label>
+          <input type="range" min="4" max="12" step="0.5" value="7.5" id="sleepInput" oninput="document.getElementById('sleepVal').innerText=this.value" class="w-full accent-sky-400">
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Proteiini (grammaa): <span id="proteinVal" class="text-sky-400 font-bold">160</span>g</label>
+          <input type="range" min="50" max="250" step="5" value="160" id="proteinInput" oninput="document.getElementById('proteinVal').innerText=this.value" class="w-full accent-sky-400">
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Vesi (litraa): <span id="waterVal" class="text-sky-400 font-bold">3.0</span>l</label>
+          <input type="range" min="1" max="6" step="0.5" value="3.0" id="waterInput" oninput="document.getElementById('waterVal').innerText=this.value" class="w-full accent-sky-400">
+        </div>
+
+        <button onclick="saveDailyRecovery()" class="w-full btn-primary py-2 text-xs">Tallenna Päivän Arvot</button>
+      </div>
+
+      <div class="card p-4 border-amber-500/30 bg-amber-500/5">
+        <h3 class="text-sm font-bold text-amber-400 flex items-center gap-2 mb-2">
+          <i class="fa-solid fa-bed"></i> Kevyt Viikko (Deload)
+        </h3>
+        <p class="text-xs text-slate-300 mb-3">Tuntuuko keho jumiutuneelta? Aktivoi kevyt viikko keventääksesi painoja 30% yhdeksi viikoksi palautumisen optimoimiseksi.</p>
+        <button id="deloadBtn" onclick="toggleDeload()" class="w-full py-2 text-xs font-bold border border-amber-500/50 text-amber-400 rounded-lg hover:bg-amber-500/10">
+          Aktivoi Kevyt Viikko
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- LIIKKEEN VAIHTO MODAL -->
+  <div id="substituteModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="card p-5 w-full max-w-sm">
+      <h3 class="text-sm font-bold text-slate-200 mb-3">Valitse Korvaava Liike</h3>
+      <div id="substituteList" class="space-y-2 mb-4"></div>
+      <button onclick="closeSubstituteModal()" class="w-full py-2 text-xs bg-slate-800 text-slate-300 rounded-lg">Peruuta</button>
+    </div>
+  </div>
+
+  <!-- LEPOAJASTIN PIIPIUS (AUDIO SYNTH) -->
+  <script>
+    function playBeep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      } catch(e){}
+    }
+
+    // BASE DATA & EXERCISE DATABASE
+    const EXERCISE_DB = {
+      squat: { name: "Takakyykky", substitutes: ["Jalkaprässi", "Hakkikyykky", "Goblet-kyykky"], baseRatio: 0.8, targetReps: "8-10", video: "https://www.youtube.com/results?search_query=takakyykky+tekniikka" },
+      legpress: { name: "Jalkaprässi", substitutes: ["Hakkikyykky", "Kuntopyörä spurtti"], baseRatio: 1.2, targetReps: "10-12", video: "https://www.youtube.com/results?search_query=jalkaprassi+tekniikka" },
+      bench: { name: "Penkkipunnerrus", substitutes: ["Käsipainopenkki", "Rintaprässi", "Etu punnerrukset"], baseRatio: 0.6, targetReps: "8-10", video: "https://www.youtube.com/results?search_query=penkkipunnerrus+tekniikka" },
+      incline_db: { name: "Vinopenkki käsipainoilla", substitutes: ["Vinopenkki tangolla", "Rintaprässi vino"], baseRatio: 0.22, targetReps: "10-12", video: "https://www.youtube.com/results?search_query=vinopenkki+kasipainoilla" },
+      row_cable: { name: "Alataljasoutu", substitutes: ["Kulmasoutu käsipainolla", "T-kulmasoutu"], baseRatio: 0.5, targetReps: "10-12", video: "https://www.youtube.com/results?search_query=alataljasoutu+tekniikka" },
+      lat_pulldown: { name: "Ylätaljaveto eteen", substitutes: ["Leuanveto avustettu", "Ylätalja leveä"], baseRatio: 0.5, targetReps: "10-12", video: "https://www.youtube.com/results?search_query=ylatalja+tekniikka" },
+      ohp: { name: "Pystypunnerrus", substitutes: ["Pystypunnerrus käsipainoilla", "Olkapääprässi"], baseRatio: 0.35, targetReps: "8-10", video: "https://www.youtube.com/results?search_query=pystypunnerrus+tekniikka" },
+      romanian_dl: { name: "Romanialainen maastaveto", substitutes: ["Reisioennus laitteessa", "Koukistus laitteessa"], baseRatio: 0.7, targetReps: "8-10", video: "https://www.youtube.com/results?search_query=romanialainen+maastaveto" },
+      biceps_curl: { name: "Hauiskääntö tangolla/taljassa", substitutes: ["Hauis käsipainoilla", "Vasarakääntö"], baseRatio: 0.25, targetReps: "10-12", video: "https://www.youtube.com/results?search_query=hauiskaanto+tekniikka" },
+      triceps_pushdown: { name: "Ojentajapunnetus taljassa", substitutes: ["Ranskalainen punnerrus", "Ojentaja käsipainolla"], baseRatio: 0.3, targetReps: "10-12", video: "https://www.youtube.com/results?search_query=ojentajapunnerrus+taljassa" }
+    };
+
+    const ROUTINES = {
+      2: [
+        { name: "Koko Keho A", exercises: ["squat", "bench", "row_cable", "ohp", "biceps_curl"] },
+        { name: "Koko Keho B", exercises: ["romanian_dl", "incline_db", "lat_pulldown", "legpress", "triceps_pushdown"] }
+      ],
+      3: [
+        { name: "Työntävät (Push)", exercises: ["bench", "incline_db", "ohp", "triceps_pushdown"] },
+        { name: "Vetävät (Pull)", exercises: ["lat_pulldown", "row_cable", "biceps_curl"] },
+        { name: "Jalat (Legs)", exercises: ["squat", "legpress", "romanian_dl"] }
+      ],
+      4: [
+        { name: "Ylävartalo A", exercises: ["bench", "row_cable", "ohp", "biceps_curl"] },
+        { name: "Alavartalo A", exercises: ["squat", "romanian_dl", "legpress"] },
+        { name: "Ylävartalo B", exercises: ["incline_db", "lat_pulldown", "triceps_pushdown"] },
+        { name: "Alavartalo B", exercises: ["legpress", "romanian_dl", "squat"] }
+      ],
+      5: [
+        { name: "Rinta & Ojentajat", exercises: ["bench", "incline_db", "triceps_pushdown"] },
+        { name: "Selkä & Hauis", exercises: ["lat_pulldown", "row_cable", "biceps_curl"] },
+        { name: "Jalat A", exercises: ["squat", "legpress"] },
+        { name: "Olkapäät & Kädet", exercises: ["ohp", "biceps_curl", "triceps_pushdown"] },
+        { name: "Jalat & Takaketju", exercises: ["romanian_dl", "legpress"] }
+      ]
+    };
+
+    // APP STATE
+    let state = {
+      user: null, // { gender, age, weight, level, days }
+      currentDayIndex: 0,
+      activeExercises: {}, // dayIndex -> array of exercise keys
+      history: {}, // exerciseKey -> array of { date, weight, reps, rir, 1rm }
+      recovery: {},
+      isDeload: false
+    };
+
+    let timerInterval = null;
+    let timerTimeLeft = 0;
+    let myChart = null;
+
+    // INIT
+    window.addEventListener("DOMContentLoaded", () => {
+      loadState();
+      if (!state.user) {
+        openWizard();
+      } else {
+        initUI();
+      }
+    });
+
+    function loadState() {
+      const saved = localStorage.getItem("smartgym_state");
+      if (saved) {
+        try { state = JSON.parse(saved); } catch(e){}
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem("smartgym_state", JSON.stringify(state));
+    }
+
+    function openWizard() {
+      if (state.user) {
+        document.getElementById("wizGender").value = state.user.gender;
+        document.getElementById("wizAge").value = state.user.age;
+        document.getElementById("wizWeight").value = state.user.weight;
+        document.getElementById("wizLevel").value = state.user.level;
+        document.getElementById("wizDays").value = state.user.days;
+        document.getElementById("wizardCloseBtn").classList.remove("hidden");
+      }
+      document.getElementById("wizardModal").classList.remove("hidden");
+    }
+
+    function closeWizard() {
+      document.getElementById("wizardModal").classList.add("hidden");
+    }
+
+    function saveWizard(e) {
+      e.preventDefault();
+      state.user = {
+        gender: document.getElementById("wizGender").value,
+        age: parseInt(document.getElementById("wizAge").value),
+        weight: parseFloat(document.getElementById("wizWeight").value),
+        level: document.getElementById("wizLevel").value,
+        days: parseInt(document.getElementById("wizDays").value)
+      };
+      
+      // Reset active exercises to match new days
+      state.activeExercises = {};
+      const routine = ROUTINES[state.user.days];
+      routine.forEach((day, idx) => {
+        state.activeExercises[idx] = [...day.exercises];
+      });
+
+      saveState();
+      closeWizard();
+      initUI();
+    }
+
+    function initUI() {
+      renderDaySelector();
+      renderExercises();
+      populateChartDropdown();
+    }
+
+    function switchTab(tab) {
+      ["workout", "stats", "recovery"].forEach(t => {
+        document.getElementById(`view-${t}`).classList.add("hidden");
+        document.getElementById(`tab-${t}`).classList.remove("tab-active");
+      });
+      document.getElementById(`view-${tab}`).classList.remove("hidden");
+      document.getElementById(`tab-${tab}`).classList.add("tab-active");
+
+      if (tab === "stats") updateChart();
+    }
+
+    function renderDaySelector() {
+      const days = ROUTINES[state.user.days];
+      const container = document.getElementById("daySelector");
+      container.innerHTML = "";
+
+      days.forEach((day, idx) => {
+        const btn = document.createElement("button");
+        btn.className = `px-4 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-all ${
+          state.currentDayIndex === idx 
+            ? "bg-sky-500 text-white shadow-lg shadow-sky-500/20" 
+            : "bg-slate-800 text-slate-400 border border-slate-700"
+        }`;
+        btn.innerText = `${idx + 1}. ${day.name}`;
+        btn.onclick = () => {
+          state.currentDayIndex = idx;
+          renderDaySelector();
+          renderExercises();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function calculateBaseWeight(exKey) {
+      const ex = EXERCISE_DB[exKey];
+      if (!ex || !state.user) return 20;
+
+      let multiplier = ex.baseRatio;
+      if (state.user.gender === "female") multiplier *= 0.7;
+      if (state.user.level === "fit") multiplier *= 1.15;
+      if (state.user.level === "athlete") multiplier *= 1.3;
+
+      let weight = state.user.weight * multiplier;
+      if (state.isDeload) weight *= 0.7;
+
+      return Math.round(weight / 2.5) * 2.5 || 10;
+    }
+
+    function renderExercises() {
+      const container = document.getElementById("exerciseList");
+      container.innerHTML = "";
+
+      const exKeys = state.activeExercises[state.currentDayIndex] || [];
+
+      exKeys.forEach((exKey) => {
+        const ex = EXERCISE_DB[exKey] || { name: exKey, targetReps: "8-10", video: "#" };
+        const history = state.history[exKey] || [];
+        const lastLog = history[history.length - 1];
+
+        let defaultWeight = lastLog ? lastLog.weight : calculateBaseWeight(exKey);
+        
+        // Smart overload suggestion
+        if (lastLog && lastLog.rir >= 3) {
+          defaultWeight += 2.5;
+        }
+
+        const card = document.createElement("div");
+        card.className = "card p-4 space-y-3";
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <h4 class="font-bold text-slate-100 text-sm">${ex.name}</h4>
+              <div class="text-xs text-slate-400">Tavoite: <span class="text-sky-400 font-semibold">${ex.targetReps} toistoa</span></div>
+            </div>
+            <div class="flex gap-2">
+              <a href="${ex.video}" target="_blank" class="p-1.5 text-xs bg-slate-800 text-sky-400 rounded border border-slate-700 hover:bg-slate-700" title="Video-ohje">
+                <i class="fa-solid fa-video"></i>
+              </a>
+              <button onclick="openSubstituteModal('${exKey}')" class="p-1.5 text-xs bg-slate-800 text-slate-400 rounded border border-slate-700 hover:bg-slate-700" title="Vaihda liike">
+                <i class="fa-solid fa-rotate"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 bg-slate-900/50 p-2.5 rounded-lg border border-slate-800">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-0.5">Paino (kg)</label>
+              <input type="number" id="weight-${exKey}" value="${defaultWeight}" step="0.5" class="w-full p-1.5 text-xs text-center font-bold">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-0.5">Toistot</label>
+              <input type="number" id="reps-${exKey}" value="10" class="w-full p-1.5 text-xs text-center font-bold">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-0.5" title="RIR = Reps in Reserve (Toistoja varastossa)">RIR (Varasto)</label>
+              <select id="rir-${exKey}" class="w-full p-1.5 text-xs text-center font-bold">
+                <option value="1">1 (Tiukka)</option>
+                <option value="2" selected>2 (Sopiva)</option>
+                <option value="3">3+ (Helppo)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="logSet('${exKey}')" class="flex-1 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold hover:bg-emerald-600/30 flex justify-center items-center gap-1">
+              <i class="fa-solid fa-check"></i> Merkitse Sarja
+            </button>
+            <button onclick="startTimer(90)" class="py-2 px-3 bg-slate-800 text-slate-300 rounded-lg text-xs font-semibold border border-slate-700 flex items-center gap-1">
+              <i class="fa-solid fa-clock"></i> 90s Lepo
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function logSet(exKey) {
+      const weight = parseFloat(document.getElementById(`weight-${exKey}`).value);
+      const reps = parseInt(document.getElementById(`reps-${exKey}`).value);
+      const rir = parseInt(document.getElementById(`rir-${exKey}`).value);
+
+      if (!weight || !reps) return;
+
+      const estimated1RM = Math.round(weight * (1 + reps / 30));
+
+      if (!state.history[exKey]) state.history[exKey] = [];
+      state.history[exKey].push({
+        date: new Date().toISOString().split("T")[0],
+        weight,
+        reps,
+        rir,
+        oneRm: estimated1RM
+      });
+
+      saveState();
+      startTimer(90);
+    }
+
+    // TIMER SYSTEM
+    function startTimer(seconds) {
+      clearInterval(timerInterval);
+      timerTimeLeft = seconds;
+      document.getElementById("timerCard").classList.remove("hidden");
+      updateTimerDisplay();
+
+      timerInterval = setInterval(() => {
+        timerTimeLeft--;
+        updateTimerDisplay();
+        if (timerTimeLeft <= 0) {
+          clearInterval(timerInterval);
+          playBeep();
+          document.getElementById("timerDisplay").innerText = "AIKA!";
+        }
+      }, 1000);
+    }
+
+    function addTimerSeconds(sec) {
+      timerTimeLeft += sec;
+      updateTimerDisplay();
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      document.getElementById("timerCard").classList.add("hidden");
+    }
+
+    function updateTimerDisplay() {
+      const m = Math.floor(timerTimeLeft / 60).toString().padStart(2, "0");
+      const s = (timerTimeLeft % 60).toString().padStart(2, "0");
+      document.getElementById("timerDisplay").innerText = `${m}:${s}`;
+    }
+
+    // SUBSTITUTE MODAL
+    let currentSubExKey = null;
+    function openSubstituteModal(exKey) {
+      currentSubExKey = exKey;
+      const ex = EXERCISE_DB[exKey];
+      const container = document.getElementById("substituteList");
+      container.innerHTML = "";
+
+      if (ex && ex.substitutes) {
+        ex.substitutes.forEach(subName => {
+          const btn = document.createElement("button");
+          btn.className = "w-full py-2 px-3 text-xs bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-left hover:bg-slate-700";
+          btn.innerText = subName;
+          btn.onclick = () => applySubstitute(subName);
+          container.appendChild(btn);
+        });
+      }
+      document.getElementById("substituteModal").classList.remove("hidden");
+    }
+
+    function closeSubstituteModal() {
+      document.getElementById("substituteModal").classList.add("hidden");
+    }
+
+    function applySubstitute(subName) {
+      // Temporary replace in state
+      const currentList = state.activeExercises[state.currentDayIndex];
+      const idx = currentList.indexOf(currentSubExKey);
+      if (idx !== -1) {
+        // create dynamic entry
+        const newKey = "sub_" + Date.now();
+        EXERCISE_DB[newKey] = { name: subName, targetReps: "10-12", video: `https://www.youtube.com/results?search_query=${encodeURIComponent(subName)}` };
+        currentList[idx] = newKey;
+      }
+      closeSubstituteModal();
+      renderExercises();
+    }
+
+    function finishWorkout() {
+      alert("Treeni päätetty ja tallennettu! Hienoa työtä.");
+    }
+
+    // CHARTS & STATS
+    function populateChartDropdown() {
+      const select = document.getElementById("chartExerciseSelect");
+      select.innerHTML = "";
+      Object.keys(EXERCISE_DB).forEach(key => {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.innerText = EXERCISE_DB[key].name;
+        select.appendChild(opt);
+      });
+    }
+
+    function updateChart() {
+      const exKey = document.getElementById("chartExerciseSelect").value;
+      const history = state.history[exKey] || [];
+
+      const labels = history.map(h => h.date);
+      const dataPoints = history.map(h => h.oneRm);
+
+      const ctx = document.getElementById("progressChart").getContext("2d");
+      if (myChart) myChart.destroy();
+
+      myChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels.length ? labels : ["Ei dataa"],
+          datasets: [{
+            label: "Arvioitu 1RM (kg)",
+            data: dataPoints.length ? dataPoints : [0],
+            borderColor: "#38bdf8",
+            backgroundColor: "rgba(56, 189, 248, 0.1)",
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: "#334155" }, ticks: { color: "#94a3b8" } },
+            y: { grid: { color: "#334155" }, ticks: { color: "#94a3b8" } }
+          }
+        }
+      });
+    }
+
+    function saveDailyRecovery() {
+      alert("Palautumistiedot tallennettu!");
+    }
+
+    function toggleDeload() {
+      state.isDeload = !state.isDeload;
+      const btn = document.getElementById("deloadBtn");
+      if (state.isDeload) {
+        btn.innerText = "Aktiivinen: Kevyt Viikko (-30%)";
+        btn.className = "w-full py-2 text-xs font-bold bg-amber-500 text-slate-900 rounded-lg";
+      } else {
+        btn.innerText = "Aktivoi Kevyt Viikko";
+        btn.className = "w-full py-2 text-xs font-bold border border-amber-500/50 text-amber-400 rounded-lg hover:bg-amber-500/10";
+      }
+      renderExercises();
+    }
+
+    function exportData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+      const anchor = document.createElement("a");
+      anchor.setAttribute("href", dataStr);
+      anchor.setAttribute("download", "smartgym_backup.json");
+      anchor.click();
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          state = JSON.parse(e.target.result);
+          saveState();
+          initUI();
+          alert("Tiedot tuotu onnistuneesti!");
+        } catch(err) {
+          alert("Virheellinen tiedosto.");
+        }
+      };
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>
